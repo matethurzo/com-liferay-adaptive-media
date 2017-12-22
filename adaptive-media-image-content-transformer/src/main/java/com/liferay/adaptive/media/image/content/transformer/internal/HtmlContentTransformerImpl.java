@@ -14,14 +14,15 @@
 
 package com.liferay.adaptive.media.image.content.transformer.internal;
 
-import com.liferay.adaptive.media.AdaptiveMediaException;
+import com.liferay.adaptive.media.content.transformer.BaseRegexStringContentTransformer;
 import com.liferay.adaptive.media.content.transformer.ContentTransformer;
 import com.liferay.adaptive.media.content.transformer.ContentTransformerContentType;
 import com.liferay.adaptive.media.content.transformer.constants.ContentTransformerContentTypes;
-import com.liferay.adaptive.media.image.html.AdaptiveMediaImageHTMLTagFactory;
+import com.liferay.adaptive.media.image.html.AMImageHTMLTagFactory;
 import com.liferay.document.library.kernel.service.DLAppLocalService;
 import com.liferay.portal.kernel.exception.PortalException;
 import com.liferay.portal.kernel.repository.model.FileEntry;
+import com.liferay.portal.kernel.util.StringUtil;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -36,61 +37,67 @@ import org.osgi.service.component.annotations.Reference;
 	immediate = true, property = "content.transformer.content.type=html",
 	service = ContentTransformer.class
 )
-public class HtmlContentTransformerImpl implements ContentTransformer<String> {
+public class HtmlContentTransformerImpl
+	extends BaseRegexStringContentTransformer {
 
 	@Override
-	public ContentTransformerContentType<String> getContentType() {
+	public ContentTransformerContentType<String>
+		getContentTransformerContentType() {
+
 		return ContentTransformerContentTypes.HTML;
 	}
 
 	@Override
-	public String transform(String html)
-		throws AdaptiveMediaException, PortalException {
-
+	public String transform(String html) throws PortalException {
 		if (html == null) {
 			return null;
 		}
 
-		StringBuffer sb = new StringBuffer(html.length());
+		String lowerCaseHtml = StringUtil.toLowerCase(html);
 
-		Matcher matcher = _IMG_PATTERN.matcher(html);
-
-		while (matcher.find()) {
-			Long fileEntryId = Long.valueOf(matcher.group(1));
-
-			FileEntry fileEntry = _dlAppLocalService.getFileEntry(fileEntryId);
-
-			String imgTag = matcher.group(0);
-
-			String adaptiveTag = _adaptiveMediaImageHTMLTagFactory.create(
-				imgTag, fileEntry);
-
-			matcher.appendReplacement(
-				sb, Matcher.quoteReplacement(adaptiveTag));
+		if (!lowerCaseHtml.contains("data-fileentryid")) {
+			return html;
 		}
 
-		matcher.appendTail(sb);
+		return super.transform(html);
+	}
 
-		return sb.toString();
+	@Override
+	protected FileEntry getFileEntry(Matcher matcher) throws PortalException {
+		long fileEntryId = Long.valueOf(matcher.group(1));
+
+		return _dlAppLocalService.getFileEntry(fileEntryId);
+	}
+
+	@Override
+	protected Pattern getPattern() {
+		return _pattern;
+	}
+
+	@Override
+	protected String getReplacement(String originalImgTag, FileEntry fileEntry)
+		throws PortalException {
+
+		return _amImageHTMLTagFactory.create(originalImgTag, fileEntry);
 	}
 
 	@Reference(unbind = "-")
-	protected void setAdaptiveMediaImageHTMLTagFactory(
-		AdaptiveMediaImageHTMLTagFactory adaptiveMediaImageHTMLTagFactory) {
+	protected void setAMImageHTMLTagFactory(
+		AMImageHTMLTagFactory amImageHTMLTagFactory) {
 
-		_adaptiveMediaImageHTMLTagFactory = adaptiveMediaImageHTMLTagFactory;
+		_amImageHTMLTagFactory = amImageHTMLTagFactory;
 	}
 
 	@Reference(unbind = "-")
-	protected void setDlAppLocalService(DLAppLocalService dlAppLocalService) {
+	protected void setDLAppLocalService(DLAppLocalService dlAppLocalService) {
 		_dlAppLocalService = dlAppLocalService;
 	}
 
-	private static final Pattern _IMG_PATTERN = Pattern.compile(
-		"<img .*?\\s*data-fileEntryId=\"(\\d+)\".*?/>",
+	private static final Pattern _pattern = Pattern.compile(
+		"<img [^>]*?\\s*data-fileEntryId=\"(\\d+)\".*?/>",
 		Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
-	private AdaptiveMediaImageHTMLTagFactory _adaptiveMediaImageHTMLTagFactory;
+	private AMImageHTMLTagFactory _amImageHTMLTagFactory;
 	private DLAppLocalService _dlAppLocalService;
 
 }

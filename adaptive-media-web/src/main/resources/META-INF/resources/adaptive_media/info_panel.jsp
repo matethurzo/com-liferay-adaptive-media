@@ -17,16 +17,16 @@
 <%@ include file="/adaptive_media/init.jsp" %>
 
 <%
-List<AdaptiveMediaImageConfigurationEntry> selectedConfigurationEntries = (List)request.getAttribute(AdaptiveMediaWebKeys.SELECTED_CONFIGURATION_ENTRIES);
+List<AMImageConfigurationEntry> selectedAMImageConfigurationEntries = (List)request.getAttribute(AMWebKeys.SELECTED_CONFIGURATION_ENTRIES);
 
-AdaptiveMediaImageConfigurationEntry configurationEntry = null;
+AMImageConfigurationEntry amImageConfigurationEntry = null;
 
 int selectedConfigurationEntriesSize = 0;
 
-if (ListUtil.isNotEmpty(selectedConfigurationEntries)) {
-	configurationEntry = selectedConfigurationEntries.get(0);
+if (ListUtil.isNotEmpty(selectedAMImageConfigurationEntries)) {
+	amImageConfigurationEntry = selectedAMImageConfigurationEntries.get(0);
 
-	selectedConfigurationEntriesSize = selectedConfigurationEntries.size();
+	selectedConfigurationEntriesSize = selectedAMImageConfigurationEntries.size();
 }
 %>
 
@@ -36,7 +36,7 @@ if (ListUtil.isNotEmpty(selectedConfigurationEntries)) {
 			<ul class="sidebar-actions">
 
 				<%
-				request.setAttribute("info_panel.jsp-configurationEntry", configurationEntry);
+				request.setAttribute("info_panel.jsp-amImageConfigurationEntry", amImageConfigurationEntry);
 				%>
 
 				<li>
@@ -45,10 +45,10 @@ if (ListUtil.isNotEmpty(selectedConfigurationEntries)) {
 			</ul>
 
 			<h4 class="sidebar-title">
-				<%= HtmlUtil.escape(configurationEntry.getName()) %>
+				<%= HtmlUtil.escape(amImageConfigurationEntry.getName()) %>
 			</h4>
 
-			<h5>
+			<h5 class="sidebar-subtitle">
 				<liferay-ui:message key="image-resolution" />
 			</h5>
 		</c:when>
@@ -67,77 +67,84 @@ if (ListUtil.isNotEmpty(selectedConfigurationEntries)) {
 			<dl class="sidebar-block">
 				<c:choose>
 					<c:when test="<%= (selectedConfigurationEntriesSize == 1) %>">
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="name" />
 						</dt>
-						<dd class="h6 sidebar-caption">
-							<%= HtmlUtil.escape(configurationEntry.getName()) %>
+						<dd class="sidebar-dd">
+							<%= HtmlUtil.escape(amImageConfigurationEntry.getName()) %>
 						</dd>
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="state" />
 						</dt>
-						<dd class="h6 sidebar-caption">
-							<%= configurationEntry.isEnabled() ? LanguageUtil.get(request, "enabled") : LanguageUtil.get(request, "disabled") %>
+						<dd class="sidebar-dd">
+							<%= amImageConfigurationEntry.isEnabled() ? LanguageUtil.get(request, "enabled") : LanguageUtil.get(request, "disabled") %>
 						</dd>
-						<dt class="h5">
-							<liferay-ui:message key="optimized-images" />
+						<dt class="sidebar-dt">
+							<liferay-ui:message key="adapted-images" />
 						</dt>
-						<dd class="h6 sidebar-caption">
-							<%= AdaptiveMediaImageEntryLocalServiceUtil.getAdaptiveMediaImageEntriesCount(themeDisplay.getCompanyId(), configurationEntry.getUUID()) + "/" + AdaptiveMediaImageEntryLocalServiceUtil.getExpectedAdaptiveMediaImageEntriesCount(themeDisplay.getCompanyId()) %>
+						<dd class="sidebar-dd">
+
+							<%
+							int adaptedImages = AMImageEntryLocalServiceUtil.getAMImageEntriesCount(themeDisplay.getCompanyId(), amImageConfigurationEntry.getUUID());
+
+							int totalImages = AMImageEntryLocalServiceUtil.getExpectedAMImageEntriesCount(themeDisplay.getCompanyId());
+							%>
+
+							<%= Math.min(adaptedImages, totalImages) + "/" + totalImages %>
 						</dd>
 
 						<%
-						Map<String, String> properties = configurationEntry.getProperties();
+						Map<String, String> properties = amImageConfigurationEntry.getProperties();
 						%>
 
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="max-width" />
 						</dt>
-						<dd class="h6 sidebar-caption">
+						<dd class="sidebar-dd">
 
 							<%
 							String maxWidth = properties.get("max-width");
 							%>
 
-							<%= maxWidth.equals("0") ? LanguageUtil.get(request, "auto") : HtmlUtil.escape(maxWidth + "px") %>
+							<%= (Validator.isNull(maxWidth) || maxWidth.equals("0")) ? LanguageUtil.get(request, "auto") : HtmlUtil.escape(maxWidth + "px") %>
 						</dd>
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="max-height" />
 						</dt>
-						<dd class="h6 sidebar-caption">
+						<dd class="sidebar-dd">
 
 							<%
 							String maxHeight = properties.get("max-height");
 							%>
 
-							<%= maxHeight.equals("0") ? LanguageUtil.get(request, "auto") : HtmlUtil.escape(maxHeight + "px") %>
+							<%= (Validator.isNull(maxHeight) || maxHeight.equals("0")) ? LanguageUtil.get(request, "auto") : HtmlUtil.escape(maxHeight + "px") %>
 						</dd>
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="id" />
 						</dt>
-						<dd class="h6 sidebar-caption">
-							<%= HtmlUtil.escape(configurationEntry.getUUID()) %>
+						<dd class="sidebar-dd">
+							<%= HtmlUtil.escape(amImageConfigurationEntry.getUUID()) %>
 						</dd>
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="description" />
 						</dt>
-						<dd class="h6 sidebar-caption">
-							<%= HtmlUtil.escape(configurationEntry.getDescription()) %>
+						<dd class="sidebar-dd">
+							<%= HtmlUtil.escape(amImageConfigurationEntry.getDescription()) %>
 						</dd>
 					</c:when>
 					<c:when test="<%= (selectedConfigurationEntriesSize > 1) %>">
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message arguments="<%= selectedConfigurationEntriesSize %>" key="x-items-are-selected" />
 						</dt>
 					</c:when>
 					<c:otherwise>
-						<dt class="h5">
+						<dt class="sidebar-dt">
 							<liferay-ui:message key="num-of-items" />
 						</dt>
-						<dd class="h6 sidebar-caption">
+						<dd class="sidebar-dd">
 
 							<%
-							List<AdaptiveMediaImageConfigurationEntry> configurationEntries = (List)request.getAttribute(AdaptiveMediaWebKeys.CONFIGURATION_ENTRIES_LIST);
+							List<AMImageConfigurationEntry> configurationEntries = (List)request.getAttribute(AMWebKeys.CONFIGURATION_ENTRIES_LIST);
 							%>
 
 							<%= configurationEntries.size() %>

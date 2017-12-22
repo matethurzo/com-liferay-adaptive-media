@@ -14,20 +14,23 @@
 
 package com.liferay.adaptive.media.web.internal.portlet.configuration.icon;
 
-import com.liferay.adaptive.media.image.configuration.AdaptiveMediaImageConfigurationEntry;
-import com.liferay.adaptive.media.image.configuration.AdaptiveMediaImageConfigurationHelper;
-import com.liferay.adaptive.media.web.constants.AdaptiveMediaPortletKeys;
+import com.liferay.adaptive.media.image.configuration.AMImageConfigurationEntry;
+import com.liferay.adaptive.media.image.configuration.AMImageConfigurationHelper;
 import com.liferay.adaptive.media.web.internal.background.task.OptimizeImagesAllConfigurationsBackgroundTaskExecutor;
+import com.liferay.adaptive.media.web.internal.constants.AMPortletKeys;
 import com.liferay.portal.kernel.backgroundtask.BackgroundTaskManager;
 import com.liferay.portal.kernel.language.LanguageUtil;
 import com.liferay.portal.kernel.model.CompanyConstants;
 import com.liferay.portal.kernel.portlet.configuration.icon.BasePortletConfigurationIcon;
 import com.liferay.portal.kernel.portlet.configuration.icon.PortletConfigurationIcon;
 import com.liferay.portal.kernel.security.permission.PermissionChecker;
+import com.liferay.portal.kernel.service.ServiceContext;
+import com.liferay.portal.kernel.service.ServiceContextThreadLocal;
 import com.liferay.portal.kernel.theme.ThemeDisplay;
 import com.liferay.portal.kernel.util.AggregateResourceBundle;
 import com.liferay.portal.kernel.util.Portal;
 import com.liferay.portal.kernel.util.ResourceBundleUtil;
+import com.liferay.portal.kernel.util.StringPool;
 import com.liferay.portal.kernel.util.WebKeys;
 
 import java.util.Collection;
@@ -47,11 +50,25 @@ import org.osgi.service.component.annotations.Reference;
  */
 @Component(
 	immediate = true,
-	property = {"javax.portlet.name=" + AdaptiveMediaPortletKeys.ADAPTIVE_MEDIA},
+	property = {"javax.portlet.name=" + AMPortletKeys.ADAPTIVE_MEDIA},
 	service = PortletConfigurationIcon.class
 )
 public class OptimizeImagesPortletConfigurationIcon
 	extends BasePortletConfigurationIcon {
+
+	@Override
+	public String getCssClass() {
+		ServiceContext serviceContext =
+			ServiceContextThreadLocal.getServiceContext();
+
+		ThemeDisplay themeDisplay = serviceContext.getThemeDisplay();
+
+		if (_isDisabled(themeDisplay.getCompanyId())) {
+			return "disabled";
+		}
+
+		return StringPool.BLANK;
+	}
 
 	@Override
 	public String getId() {
@@ -61,8 +78,7 @@ public class OptimizeImagesPortletConfigurationIcon
 	@Override
 	public String getMessage(PortletRequest portletRequest) {
 		return LanguageUtil.get(
-			getResourceBundle(getLocale(portletRequest)),
-			"optimize-all-images");
+			getResourceBundle(getLocale(portletRequest)), "adapt-all-images");
 	}
 
 	@Override
@@ -78,8 +94,15 @@ public class OptimizeImagesPortletConfigurationIcon
 	public String getURL(
 		PortletRequest portletRequest, PortletResponse portletResponse) {
 
+		ThemeDisplay themeDisplay = (ThemeDisplay)portletRequest.getAttribute(
+			WebKeys.THEME_DISPLAY);
+
+		if (_isDisabled(themeDisplay.getCompanyId())) {
+			return "javascript:;";
+		}
+
 		PortletURL portletURL = _portal.getControlPanelPortletURL(
-			portletRequest, AdaptiveMediaPortletKeys.ADAPTIVE_MEDIA,
+			portletRequest, AMPortletKeys.ADAPTIVE_MEDIA,
 			PortletRequest.ACTION_PHASE);
 
 		portletURL.setParameter(
@@ -105,6 +128,18 @@ public class OptimizeImagesPortletConfigurationIcon
 			return false;
 		}
 
+		return true;
+	}
+
+	private boolean _isDisabled(long companyId) {
+		Collection<AMImageConfigurationEntry> amImageConfigurationEntries =
+			_amImageConfigurationHelper.getAMImageConfigurationEntries(
+				companyId);
+
+		if (amImageConfigurationEntries.isEmpty()) {
+			return true;
+		}
+
 		int backgroundTasksCount =
 			_backgroundTaskManager.getBackgroundTasksCount(
 				CompanyConstants.SYSTEM,
@@ -113,25 +148,17 @@ public class OptimizeImagesPortletConfigurationIcon
 				false);
 
 		if (backgroundTasksCount != 0) {
-			return false;
+			return true;
 		}
 
-		Collection<AdaptiveMediaImageConfigurationEntry> configurationEntries =
-			_configurationHelper.getAdaptiveMediaImageConfigurationEntries(
-				themeDisplay.getCompanyId());
-
-		if (configurationEntries.isEmpty()) {
-			return false;
-		}
-
-		return true;
+		return false;
 	}
 
 	@Reference
-	private BackgroundTaskManager _backgroundTaskManager;
+	private AMImageConfigurationHelper _amImageConfigurationHelper;
 
 	@Reference
-	private AdaptiveMediaImageConfigurationHelper _configurationHelper;
+	private BackgroundTaskManager _backgroundTaskManager;
 
 	@Reference
 	private Portal _portal;

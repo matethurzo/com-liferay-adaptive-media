@@ -14,17 +14,24 @@
 
 package com.liferay.adaptive.media.content.transformer;
 
-import com.liferay.adaptive.media.AdaptiveMediaException;
 import com.liferay.portal.kernel.exception.PortalException;
 
 /**
+ * Transforms the original content to include Adaptive Media. This logic is
+ * invoked before the content is rendered.
+ *
+ * <p>
+ * Implementations of this interface must specify the {@link
+ * ContentTransformerContentType} that they can manage and the implementation of
+ * the transform function.
+ * </p>
+ *
  * @author Alejandro Tardín
  */
 public interface ContentTransformer<T> {
 
-	public ContentTransformerContentType<T> getContentType();
+	public ContentTransformerContentType<T> getContentTransformerContentType();
 
-	public T transform(T content)
-		throws AdaptiveMediaException, PortalException;
+	public T transform(T content) throws PortalException;
 
 }

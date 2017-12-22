@@ -18,7 +18,6 @@ import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMap;
 import com.liferay.osgi.service.tracker.collections.map.ServiceTrackerMapFactory;
 import com.liferay.portal.kernel.log.Log;
 import com.liferay.portal.kernel.log.LogFactoryUtil;
-import com.liferay.portal.kernel.util.ListUtil;
 
 import java.util.List;
 
@@ -28,16 +27,26 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 
 /**
+ * Transforms the content by invoking the {@link ContentTransformer} available
+ * for a specific {@link ContentTransformerContentType}. There can be more than
+ * one content transformer available for a particular content type, and they
+ * will all be executed, but the order is not guaranteed.
+ *
  * @author Alejandro Tardín
  */
 @Component(immediate = true, service = ContentTransformerHandler.class)
 public class ContentTransformerHandler {
 
 	public <T> T transform(
-		ContentTransformerContentType<T> contentType, T originalContent) {
+		ContentTransformerContentType<T> contentTransformerContentType,
+		T originalContent) {
 
-		List<ContentTransformer> contentTransformers = ListUtil.fromCollection(
-			_serviceTrackerMap.getService(contentType));
+		List<ContentTransformer> contentTransformers =
+			_serviceTrackerMap.getService(contentTransformerContentType);
+
+		if (contentTransformers == null) {
+			return originalContent;
+		}
 
 		T transformedContent = originalContent;
 
@@ -47,7 +56,9 @@ public class ContentTransformerHandler {
 					transformedContent);
 			}
 			catch (Exception e) {
-				_log.error(e);
+				if (_log.isDebugEnabled()) {
+					_log.debug(e, e);
+				}
 			}
 		}
 
@@ -62,7 +73,8 @@ public class ContentTransformerHandler {
 				ContentTransformer contentTransformer =
 					bundleContext.getService(serviceReference);
 
-				emitter.emit(contentTransformer.getContentType());
+				emitter.emit(
+					contentTransformer.getContentTransformerContentType());
 
 				bundleContext.ungetService(serviceReference);
 			});
